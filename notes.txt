@@ -1,0 +1,226 @@
+https://www.youtube.com/watch?v=UmljXZIypDc
+
+django-admin startproject [proj Name]
+
+__init__.py = Empty file, tells python this is py package
+setting.py = change conf & settings, 
+-- SECRET_KEY = security
+-- Debug mode
+urls.py = where we'll set up mapping, for where send user
+- wsgi.py = how py communicates with web server, whiskey config
+
+python manage.py runserver
+/admin page = 
+
+******** Chapt 2 - Applications and Routes
+Single project can contain multiple apps
+python manage.py startapp blog
+
+python manage.py runserver
+
+Once put in server address, it looks in project/site.urls for possibilities. In this case, there's /admin and /blog
+
+blog.urls =     This home is server.com/blog/
+    # checks project.urls, if /blog, moves here, then goes to blog.views.about
+    # Good that URL gets passed around, can change blog route in 1 place (project.URLs), all dependent paths get changes
+
+about/ - trailing '/' - django will redirect routes without a '/', to a trailing slash route
+
+What if wanted blog/home to be homepage of website http://127.0.0.1:8000/  ?
+    in project.urls, change blog.urls (below)
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    ## path('blog/', include('blog.urls')),
+    path('', include('blog.urls')),
+]
+
+********* Part 3 - Templates
+blog/templates/blog/templates.html
+Need to have app folder in templates
+
+After template established, need to add blog application to list of installed apps. Recommended to add app configuration to our projects.settings, in apps.py module
+add 'blog.apps.BlogConfig' to project.settings['INSTALLED_APPS']
+    # get BlogConfig from apps.py
+    # get used to adding applications to this list, so Django can correctly seach templates and DB
+
+blog.views, use from django.shortcuts import render
+def home(request):
+    return render(request, 'blog/home.html')
+
+## template similar to jinja, see dummy data in context in views.py. Added to home.html
+Use {{ }} for variable/date
+Use {% %} for loops, complex stuff
+
+We use templates for temple inheritence - say we wanted to add bootstrap, we'd need to change everywhere
+https://getbootstrap.com/docs/4.0/getting-started/introduction/#starter-template
+    # there are 3rd party apps to use Django and Bootstrap together
+
+Styling Snippets = https://github.com/CoreyMSchafer/code_snippets/tree/master/Django_Blog/snippets
+
+static directory = css
+Adding CSS to base = 
+{% load static %}
+<head>
+    <!-- ** ADD CSS - static ** -->
+    <link rel="stylesheet" type='text/css' href='{% static "blog/main.css" %}'
+</head>
+
+******* Part 4 - Admin Page
+# Set Up DB
+$ python manage.py makemigrations
+# Above is only if theres custom changes
+$ python manage.py migrate 
+# Create SU
+$ python manage.py createsuperuser
+
+User = ceewick
+email = wickhcp
+password = testing321
+
+in site.com/admin
+Add Groups - Home/Authentication&Authorizatoin/Groups
+Add Users
+
+******** Part 5 - Database and Migrations
+Django has it's own ORM - if you have diff DBs, you can, just change settings. BUT language will be the same
+
+Can represent DB structure as classes/models - models.py
+# users, posts - django already has user model established. For now, we just make posts class for posts model
+
+After create models = $ python manage.py makemigrations
+
+To see actual SQL code, run:
+$ python manage.py sqlmigrate [app name][migration #]
+$ python manage.py sqlmigrate blog 0001
+
+To actually run migrations and make changes effect to DB
+$ python manage.py migrate
+    # allows us to make changes to database that are already build
+
+Run Django shell = $python manage.py shell
+
+>> from blog.models import Post
+>> from django.contrib.auth.models import User
+    # We already have 2 ysers. Query users = 
+>> Users.objects.all()
+>>> User.objects.first()
+>>> User.objects.last()
+>>> User.objects.filter(username='ceewick')
+>>> User.objects.filter(username='ceewick').first()
+>>> user = User.objects.filter(username='ceewick').first()
+>>> user.id
+1
+>>> user.pk
+1
+>>> user = User.objects.get(id=1)
+<User: ceewick>
+## Make new post
+>>> Post.objects.all()
+<QuerySet []>
+>>> post_1 = Post(title='Blog 1', content='First Post Content', author=user)
+>>> post_1.save()
+>>> Post.objects.all()
+<QuerySet [<Post: Post object (1)>]>
+
+In models.py, create __str__ method
+def __str__(self):
+    return self.title
+** exit shell, open back up
+
+>>> Post.objects.all()
+<QuerySet [<Post: Blog 1>]>
+>>> user = User.objects.filter(username='ceewick').first()
+>>> post_2 = Post(title='Blog2', content='Second Post Content!!', author_id=user.id)
+>>> post_2.save()
+>>> Post.objects.all()
+<QuerySet [<Post: Blog 1>, <Post: Blog2>]>
+>>> post = Post.objects.first()
+>>> post.content
+'First Post Content'
+>>> post.date_posted
+datetime.datetime(2018, 9, 30, 9, 20, 30, 609527, tzinfo=<UTC>)
+>>> post.author
+<User: ceewick>
+>>> post.author.email
+'wickhcp@gmail.com'
+# Get all posts by a specific user. Django special query set = [name of related model _ set]
+>>> user.post_set
+<django.db.models.fields.related_descriptors.create_reverse_many_to_one_manager.<locals>.RelatedManager object at 0x7f4a6c4efa90>
+>>> user.post_set.all()
+<QuerySet [<Post: Blog 1>, <Post: Blog2>]>
+>>> user.post_set.create(title='Blog 3', content='third post content!!')
+<Post: Blog 3>
+# above, didn't specify author, but Django knows
+>>> Post.objects.all()
+<QuerySet [<Post: Blog 1>, <Post: Blog2>, <Post: Blog 3>]>
+>>> exit()
+
+In blog.views.py
+from .models import Post
+
+def home(request):
+    context = {
+        # 'posts': posts
+        'posts': Post.objects.all()
+    }
+
+Need to add Posts to admin.py (register models). admin.py = 
+from django.contrib import admin
+from .models import Post
+
+admin.site.register(Post)
+
+Now, from site.com/admin, there's a Post section. You can view/update posts there
+
+******** Part 6 - User Registration
+# How will user logic relate?
+## Will have it's own templates, routes, etc
+### Create a new app
+>>> python nage.py startapp users
+
+Add to project.settings
+# Go to users.apps.py, see 
+class UsersConfig(AppConfig):
+    name = 'blog'
+
+That means, in settings, add below to INSTALLED_APPS:     
+'users.apps.UsersConfig',
+
+in users.view: 
+from django.shortcuts import render
+from django.contrib.auth.forms import UserCreationForm
+
+def register(request):
+    #  Form to be passed to template
+    # can create python classes that create HTML for us
+    form = UserCreationForm()
+    return render(request, "users/register", {'form':form})
+
+Create templates/users/
+
+After that, in users.views
+adding data from form. 
+Flash message = message.debug, message.info, message.success, message.warning, message.error
+
+>>> pip install django-crispy-forms
+Goto project.settings, add to INSTALLED APPS:
+'crispy_forms',
+
+Also, at bottom of settings, change style:
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
+
+Part 7 - Login and Logout System - Authentication System
+
+In project.urls:
+from django.contrib.auth import views as auth_views
+
+path('login/',auth_views.LoginView.as_view(template_name='users/login.html'), name='login'),
+path('logout/', auth_views.LogoutView.as_view(template_name='users/logout.html'), name='logout'),
+
+http://127.0.0.1:8000/login/ = TemplateDoesNotExist at /login/
+
+## create templates users/logout.html
+
+# Change login redirect from default in project.settings
+LOGIN_REDIRECT_URL = 'blog-home'

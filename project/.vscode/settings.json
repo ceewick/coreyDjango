@@ -1,0 +1,11 @@
+// {
+//     "python.pythonPath": "/home/ceewick/anaconda3/envs/coreyDjango/bin/python"
+    
+// }
+{
+    "python.pythonPath": 
+    "/home/ceewick/anaconda3/envs/${env:CONDA_DEFAULT_ENV}/bin/python" }
+
+// {
+//     "python.pythonPath": "${env:PYTHON_INSTALL_LOC}"
+// }
